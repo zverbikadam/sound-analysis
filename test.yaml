@@ -1,0 +1,25 @@
+esphome:
+  name: test
+  platform: ESP32
+  board: esp32dev
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "fb603488953e0af7072330b716e944f3"
+
+# wifi ssid and password are stored in home assistants /config/secrets.yaml
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Test Fallback Hotspot"
+    password: "Abrg0uWYwEck"
+
+captive_portal:
