@@ -32,5 +32,5 @@ captive_portal:
 
 custom_component:
   - lambda: |-
-      auto my_custom = new MyCustomComponent();
-      return {my_custom};
+      auto analyzer = new SoundAnalysis();
+      return {analyzer};
