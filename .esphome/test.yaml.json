@@ -2,13 +2,26 @@
   "storage_version": 1,
   "name": "test",
   "comment": null,
-  "esphome_version": "2021.9.3",
+  "esphome_version": "2021.10.2",
   "src_version": 1,
-  "arduino_version": null,
   "address": "test.local",
-  "esp_platform": "ESP32",
-  "board": "esp32dev",
-  "build_path": null,
-  "firmware_bin_path": null,
-  "loaded_integrations": []
+  "esp_platform": "esp32",
+  "build_path": "/config/esphome/test",
+  "firmware_bin_path": "/data/test/.pioenvs/test/firmware.bin",
+  "loaded_integrations": [
+    "api",
+    "async_tcp",
+    "captive_portal",
+    "esp32",
+    "esphome",
+    "logger",
+    "md5",
+    "mdns",
+    "network",
+    "ota",
+    "preferences",
+    "socket",
+    "web_server_base",
+    "wifi"
+  ]
 }
