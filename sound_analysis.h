@@ -1,6 +1,6 @@
 #include "esphome.h"
 
-class MyCustomComponent : public Component, public CustomMQTTDevice {
+class SoundAnalysis : public Component, public CustomMQTTDevice {
  public:
   void setup() override {
     // This will be called once to set up the component
