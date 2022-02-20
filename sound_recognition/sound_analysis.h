@@ -1,8 +1,16 @@
 #include "main.h"
 #include <esphome.h>
 #include <driver/i2s.h>
+#include <arduinoFFT.h>
 
 uint8_t buffer32[4096];
+
+const int BLOCK_SIZE = SAMPLES;
+// our FFT data
+static double* real = new double[SAMPLES];
+static double* imag = new double[SAMPLES];
+static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLES);
+static float energy[OCTAVES];
 
 void init_i2s()
 {
