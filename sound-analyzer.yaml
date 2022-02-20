@@ -3,8 +3,8 @@ esphome:
   platform: ESP32
   board: esp32dev
   includes:
-    - sound_recognition/sound_analysis.h
     - sound_recognition/main.h
+    - sound_recognition/config.h
   libraries:
     - "kosme/arduinoFFT"
 
