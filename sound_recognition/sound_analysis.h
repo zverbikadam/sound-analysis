@@ -52,10 +52,15 @@ void read_data()
   }
 }
 
-
-
-class SoundAnalysis : public Component, public CustomMQTTDevice {
+class SoundSensor : public Component, public CustomMQTTDevice, public BinarySensor {
  public:
+
+// binary sensor with states 0 -> not recognized; 1 -> recognized
+BinarySensor *sound_recognition_sensor = new BinarySensor();
+
+// For components that should be initialized after a data connection (API/MQTT) is connected
+float get_setup_priority() const override { return esphome::setup_priority::AFTER_CONNECTION; }
+
   void setup() override {
     // start up the I2S peripheral
     init_i2s();
