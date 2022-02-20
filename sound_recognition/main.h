@@ -19,5 +19,7 @@
 #define SAMPLE_RATE 16000
 #define NUM_CHANNELS 1
 
+#define SAMPLES 1024
+#define OCTAVES 9
 
 #endif

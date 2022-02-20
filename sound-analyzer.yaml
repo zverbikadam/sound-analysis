@@ -5,6 +5,8 @@ esphome:
   includes:
     - sound_recognition/sound_analysis.h
     - sound_recognition/main.h
+  libraries:
+    - "kosme/arduinoFFT"
 
 mqtt:
   broker: !secret mqtt_broker
