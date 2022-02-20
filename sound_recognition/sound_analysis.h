@@ -6,6 +6,8 @@ uint8_t buffer32[4096];
 
 void init_i2s()
 {
+  esp_err_t err;
+
   // Config struct
   i2s_config_t i2s_config = {
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
@@ -27,10 +29,21 @@ void init_i2s()
       .data_in_num = PIN_I2S_SD};
 
   // Init driver
-  i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
+  err = i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
+if (err != ESP_OK) {
+  ESP_LOGE("Sound Sensor", "Failed installing driver: %d\n", err);
+  while (true)
+    ;
+}
 
   // Init GPIO
-  i2s_set_pin(I2S_PORT, &pin_config);
+  err = i2s_set_pin(I2S_PORT, &pin_config);
+  if (err != ESP_OK) {
+    ESP_LOGE("Sound Sensor", "Failed setting up pin: %d\n", err);
+    while (true)
+    ;
+  }
+  ESP_LOGI("Sound Sensor", "I2S driver installed correctly!");
 }
 
 void read_data()
@@ -52,12 +65,19 @@ void read_data()
   }
 }
 
-
-
-class SoundAnalysis : public Component, public CustomMQTTDevice {
+class SoundSensor : public Component, public CustomMQTTDevice, public BinarySensor {
  public:
+
+// binary sensor with states 0 -> not recognized; 1 -> recognized
+BinarySensor *sound_recognition_sensor = new BinarySensor();
+
+// For components that should be initialized after a data connection (API/MQTT) is connected
+float get_setup_priority() const override { return esphome::setup_priority::AFTER_CONNECTION; }
+
   void setup() override {
     // start up the I2S peripheral
+
+    ESP_LOGI("Sound Sensor", "Configuring I2S...");
     init_i2s();
 
     delay(500);

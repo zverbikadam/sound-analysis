@@ -31,7 +31,12 @@ wifi:
 
 captive_portal:
 
-custom_component:
-  - lambda: |-
-      auto analyzer = new SoundAnalysis();
-      return {analyzer};
+binary_sensor:
+  - platform: custom
+    lambda: |-
+      auto sound_sensor = new SoundSensor();
+      App.register_component(sound_sensor);
+      return {sound_sensor};
+
+    binary_sensors:
+      name: "Sound Sensor"
