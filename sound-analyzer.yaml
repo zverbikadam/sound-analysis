@@ -3,7 +3,7 @@ esphome:
   platform: ESP32
   board: esp32dev
   includes:
-    - sound_analysis.h
+    - sound_recognition/sound_analysis.h
 
 mqtt:
   broker: !secret mqtt_broker
