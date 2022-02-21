@@ -10,8 +10,8 @@ esphome:
 
 mqtt:
   broker: !secret mqtt_broker
-  username: !secret mqtt_user
-  password: !secret mqtt_password
+  # username: !secret mqtt_user
+  # password: !secret mqtt_password
 
 # Enable logging
 logger:
