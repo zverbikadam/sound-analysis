@@ -138,7 +138,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     unsigned int peak = (int)floor(fft.MajorPeak());
 
-    // detecting 1kHz and 1.5kHz
+    // detecting 867 Hz
     if (detectFrequency(&wine_glass, 15, peak, 55))
     {
         ESP_LOGI("Sound Sensor", "Frequency detected");
