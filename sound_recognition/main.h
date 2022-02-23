@@ -10,9 +10,6 @@ const int BLOCK_SIZE = SAMPLES;
 static double real[SAMPLES];
 static double imag[SAMPLES];
 static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLES);
-static float energy[OCTAVES];
-// A-weighting curve from 31.5 Hz ... 8000 Hz
-static const float aweighting[] = {-39.4, -26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1};
 
 static unsigned int wine_glass = 0;
 
@@ -101,55 +98,9 @@ static void calculateEnergy(double *vReal, double *vImag, uint16_t samples)
     }
 }
 
-// sums up energy in bins per octave
-static void sumEnergy(double *bins, float *energies, int bin_size, int num_octaves)
+bool detectFrequency(unsigned int *mem, unsigned int minMatch, double peak, unsigned int bin)
 {
-    // skip the first bin
-    int bin = bin_size;
-    for (int octave = 0; octave < num_octaves; octave++)
-    {
-        float sum = 0.0;
-        for (int i = 0; i < bin_size; i++)
-        {
-            sum += real[bin++];
-        }
-        energies[octave] = sum;
-        bin_size *= 2;
-    }
-}
-
-static float decibel(float v)
-{
-    return 10.0 * log(v) / log(10);
-}
-
-// converts energy to logaritmic, returns A-weighted sum
-static float calculateLoudness(float *energies, const float *weights, int num_octaves, float scale)
-{
-    float sum = 0.0;
-    for (int i = 0; i < num_octaves; i++)
-    {
-        float energy = scale * energies[i];
-        sum += energy * pow(10, weights[i] / 10.0);
-        energies[i] = decibel(energy);
-    }
-    return decibel(sum);
-}
-
-unsigned int countSetBits(unsigned int n)
-{
-    unsigned int count = 0;
-    while (n)
-    {
-        count += n & 1;
-        n >>= 1;
-    }
-    return count;
-}
-
-bool detectFrequency(unsigned int *mem, unsigned int minMatch, double peak, unsigned int bin1, unsigned int bin2, bool wide)
-{
-    if (peak == bin1 || peak == bin2 || (wide && (peak == bin1 + 1 || peak == bin1 - 1 || peak == bin2 + 1 || peak == bin2 - 1)))
+    if (peak == bin) //|| (true && (peak == bin + 1 || peak == bin - 1)))
     {
         return true;
     }
@@ -175,26 +126,22 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
   }
 
   void loop() override {
+    // read data from i2s
     read_data();
 
-    // FFT - flat top windowing method; FFT_FORWARD = 0x01
+    // FFT_WIN_TYP_FLT_TOP - flat top windowing method; FFT_FORWARD = 0x01
     fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
     fft.Compute(FFT_FORWARD);
 
     // calculate energy in each bin
     calculateEnergy(real, imag, SAMPLES);
 
-    // sum up energy in bin for each octave
-    sumEnergy(real, energy, 1, OCTAVES);
-
-    // calculate loudness per octave + A weighted loudness
-    float loudness = calculateLoudness(energy, aweighting, OCTAVES, 1.0);
     unsigned int peak = (int)floor(fft.MajorPeak());
 
     // detecting 1kHz and 1.5kHz
-    if (detectFrequency(&wine_glass, 15, peak, 39, 40, true))
+    if (detectFrequency(&wine_glass, 15, peak, 55))
     {
-        ESP_LOGI("Sound Sensor", "Detected wine glass, cheers!");
+        ESP_LOGI("Sound Sensor", "Frequency detected");
     }
   }
 };

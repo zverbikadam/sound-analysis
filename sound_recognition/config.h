@@ -16,14 +16,12 @@
 
 // Config audio
 #define BITS_PER_SAMPLE 16
-#define SAMPLE_RATE 22627
+#define SAMPLE_RATE 16000
 #define NUM_CHANNELS 1
 
 //Number of measurements we use for calculation
 // The higher the number of samples, the more accurate frequencies we can detect. However, more samples = more computation
 
 #define SAMPLES 1024    // always power of 2
-
-#define OCTAVES 9
 
 #endif
