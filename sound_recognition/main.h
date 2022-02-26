@@ -3,15 +3,12 @@
 #include <driver/i2s.h>
 #include <arduinoFFT.h>
 
-int32_t buffer32[SAMPLES];
+uint32_t buffer32[SAMPLES];
 
-const int BLOCK_SIZE = SAMPLES;
 // our FFT data
 static double real[SAMPLES];
 static double imag[SAMPLES];
 static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLES);
-
-static unsigned int wine_glass = 0;
 
 void init_i2s()
 {
@@ -55,11 +52,11 @@ void init_i2s()
   ESP_LOGI("Sound Sensor", "I2S driver installed correctly!");
 }
 
-static void integerToFloat(int32_t *integer, double *vReal, double *vImag, uint16_t samples)
+static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint16_t number_of_samples)
 {
-    for (uint16_t i = 0; i < samples; i++)
+    for (uint16_t i = 0; i < number_of_samples; i++)
     {
-        vReal[i] = (integer[i] >> 16) / 10.0;
+        vReal[i] = (signal[i] >> 16) / 1.0;
         vImag[i] = 0.0;
     }
 }
@@ -73,23 +70,11 @@ void read_data()
 
   samples_read = bytes_read >> 2;
 
-  // for (uint32_t i = 0; i < samples_read; i++)
-  // {
-  //   uint8_t lsb = buffer32[i * 4 + 2];
-  //   uint8_t msb = buffer32[i * 4 + 3];
-  //   uint16_t sample = ((((uint16_t)msb) << 8) | ((uint16_t)lsb)) << 4;
-  //   if (samples_written < sizeof(samples_for_fft)) {
-  //     // SAVE SAMPLES TO SOME ARRAY
-  //     samples_written++;
-  //   }
-  //   else break;
-  // }
-  // prepare data for fft
-  integerToFloat(buffer32, real, imag, SAMPLES);
+  prepare_for_fft(buffer32, real, imag, SAMPLES);
 }
 
 // calculates energy from Re and Im parts and places it back in the Re part (Im part is zeroed)
-static void calculateEnergy(double *vReal, double *vImag, uint16_t samples)
+static void calculate_energy(double *vReal, double *vImag, uint16_t samples)
 {
     for (uint16_t i = 0; i < samples; i++)
     {
@@ -98,9 +83,9 @@ static void calculateEnergy(double *vReal, double *vImag, uint16_t samples)
     }
 }
 
-bool detectFrequency(unsigned int *mem, unsigned int minMatch, double peak, unsigned int bin)
+bool detect_frequency(double peak, unsigned int bin)
 {
-    if (peak == bin) //|| (true && (peak == bin + 1 || peak == bin - 1)))
+    if (peak == bin)
     {
         return true;
     }
@@ -134,12 +119,12 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     fft.Compute(FFT_FORWARD);
 
     // calculate energy in each bin
-    calculateEnergy(real, imag, SAMPLES);
+    calculate_energy(real, imag, SAMPLES);
 
     unsigned int peak = (int)floor(fft.MajorPeak());
-
+    
     // detecting 867 Hz
-    if (detectFrequency(&wine_glass, 15, peak, 55))
+    if (detect_frequency(peak, 55))
     {
         ESP_LOGI("Sound Sensor", "Frequency detected");
     }
