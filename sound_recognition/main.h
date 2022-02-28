@@ -5,7 +5,6 @@
 
 uint32_t buffer32[SAMPLES];
 
-// our FFT data
 static double real[SAMPLES];
 static double imag[SAMPLES];
 static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLES);
@@ -64,13 +63,7 @@ static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint
 void read_data()
 {
   uint32_t bytes_read = 0;
-  uint32_t samples_written = 0;
-  uint16_t samples_read;
   i2s_read(I2S_PORT, (void *) buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
-
-  samples_read = bytes_read >> 2;
-
-  prepare_for_fft(buffer32, real, imag, SAMPLES);
 }
 
 // calculates energy from Re and Im parts and places it back in the Re part (Im part is zeroed)
@@ -113,6 +106,8 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
   void loop() override {
     // read data from i2s
     read_data();
+
+    prepare_for_fft(buffer32, real, imag, SAMPLES);
 
     // FFT_WIN_TYP_FLT_TOP - flat top windowing method; FFT_FORWARD = 0x01
     fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
