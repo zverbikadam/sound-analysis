@@ -4,6 +4,8 @@
 #include <arduinoFFT.h>
 
 uint32_t buffer32[SAMPLES];
+ushort counter;
+short result[4];
 
 static double real[SAMPLES];
 static double imag[SAMPLES];
@@ -78,7 +80,7 @@ static void calculate_energy(double *vReal, double *vImag, uint16_t samples)
 
 bool detect_frequency(double peak, unsigned int bin)
 {
-    if (peak == bin)
+    if (peak >= bin - 3 && peak <= bin + 3)
     {
         return true;
     }
@@ -100,28 +102,74 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     ESP_LOGI("Sound Sensor", "Configuring I2S...");
     init_i2s();
 
+    counter = 0;
+
     delay(500);
   }
 
   void loop() override {
-    // read data from i2s
-    read_data();
 
-    prepare_for_fft(buffer32, real, imag, SAMPLES);
-
-    // FFT_WIN_TYP_FLT_TOP - flat top windowing method; FFT_FORWARD = 0x01
-    fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
-    fft.Compute(FFT_FORWARD);
-
-    // calculate energy in each bin
-    calculate_energy(real, imag, SAMPLES);
-
-    unsigned int peak = (int)floor(fft.MajorPeak());
-    
-    // detecting 867 Hz
-    if (detect_frequency(peak, 55))
-    {
-        ESP_LOGI("Sound Sensor", "Frequency detected");
+    for (ushort i = 0; i < 10; i++) {
+      read_data();
+      prepare_for_fft(buffer32, real, imag, SAMPLES);
+      fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
+      fft.Compute(FFT_FORWARD);
+      calculate_energy(real, imag, SAMPLES);
+      unsigned int peak = (int)floor(fft.MajorPeak());
+      if (counter % 2 == 0) {
+        if (detect_frequency(peak, 44) || detect_frequency(peak, 132)) {
+          // ESP_LOGI("Sound Sensor", "Detected first freq");
+          result[counter] = 1;
+          counter++;
+          continue;
+        }
+        else if (detect_frequency(peak, 61) || detect_frequency(peak, 185)) {
+          continue;
+        }
+        else {
+          counter = 0;
+          break;
+        }
+      }
+      else {
+        if (detect_frequency(peak, 61) || detect_frequency(peak, 185)) {
+          //  ESP_LOGI("Sound Sensor", "Detected second freq");
+          result[counter] = 2;
+          counter++;
+          continue;
+        }
+        else if (detect_frequency(peak, 44) || detect_frequency(peak, 132)) {
+          continue;
+        }
+        else {
+          counter = 0;
+          break;
+        }
+      }
     }
+    if (result[0] == 1 && result[1] == 2 && result[2] == 1 && result[3] == 2) {
+      ESP_LOGI("Sound Sensor", "Doorbell recognized");
+      result[0] = 0;
+    }
+    // // read data from i2s
+    // read_data();
+
+    // prepare_for_fft(buffer32, real, imag, SAMPLES);
+
+    // // FFT_WIN_TYP_FLT_TOP - flat top windowing method; FFT_FORWARD = 0x01
+    // fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
+    // fft.Compute(FFT_FORWARD);
+
+    // // calculate energy in each bin
+    // calculate_energy(real, imag, SAMPLES);
+
+    // unsigned int peak = (int)floor(fft.MajorPeak());
+    // // ESP_LOGI("Sound Sensor", "%d", peak);
+    
+    // // detecting 867 Hz
+    // if (detect_frequency(peak, 182))
+    // {
+    //     ESP_LOGI("Sound Sensor", "Frequency detected");
+    // }
   }
 };
