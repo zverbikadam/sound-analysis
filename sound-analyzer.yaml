@@ -6,7 +6,7 @@ esphome:
     - sound_recognition/main.h
     - sound_recognition/config.h
   libraries:
-    - "kosme/arduinoFFT"
+    - arduinoFFT=https://github.com/zverbikadam/FFTdev.git
 
 mqtt:
   broker: !secret mqtt_broker

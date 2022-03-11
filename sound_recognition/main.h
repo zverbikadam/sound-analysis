@@ -9,7 +9,7 @@ short result[4];
 
 static double real[SAMPLES];
 static double imag[SAMPLES];
-static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLES);
+static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLE_RATE);
 
 void init_i2s()
 {
