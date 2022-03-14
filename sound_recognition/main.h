@@ -2,6 +2,7 @@
 #include <esphome.h>
 #include <driver/i2s.h>
 #include <arduinoFFT.h>
+#include <math.h>
 
 uint32_t buffer32[SAMPLES];
 ushort counter;
@@ -78,7 +79,7 @@ static void calculate_energy(double *vReal, double *vImag, uint16_t samples)
 {
     for (uint16_t i = 0; i < samples; i++)
     {
-        vReal[i] = sq(vReal[i]) + sq(vImag[i]);
+        vReal[i] = sqrt(sq(vReal[i]) + sq(vImag[i]));
         vImag[i] = 0.0;
     }
 }
@@ -200,21 +201,65 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     // calculate energy in each bin
     calculate_energy(real, imag, SAMPLES);
 
-    unsigned int peak = (int)floor(fft.MajorPeak());
-      // ESP_LOGI("Sound Sensor", "%d", peak);
-      
-    if (peak >= 2070 - 30 && peak <= 2070 + 30) {
-      ESP_LOGI("Sound Sensor", "Peak: %d", peak);
-      int bin = (int)(peak / 15.625);
-      ESP_LOGI("Sound Sensor", "Bin: %d", bin);
-      real[bin - 2] = 0;
-      real[bin - 1] = 0;
-      real[bin] = 0;
-      real[bin + 1] = 0;
-      real[bin + 2] = 0;
-      peak = (int)floor(fft.MajorPeak());
-      ESP_LOGI("Sound Sensor", "New Peak: %d", peak);
+    double major_peaks[4];
+    fft.TopPeaks(major_peaks, 4);
+    unsigned int peak1 = (int)floor(major_peaks[0]);
+    unsigned int peak2 = (int)floor(major_peaks[1]);
+    unsigned int peak3 = (int)floor(major_peaks[2]);
+    unsigned int peak4 = (int)floor(major_peaks[3]);
+    if ((peak1 >= 2070 - 30 && peak1 <= 2070 + 30) || (peak1 >= 690 - 30 && peak1 <= 690 + 30) || (peak1 >= 3440 - 30 && peak1 <= 3440 + 30)) {
+      ESP_LOGI("Sound Sensor", "Peak1 1 :%d", peak1);
+      ESP_LOGI("Sound Sensor", "Peak1 2 :%d", peak2);
+      ESP_LOGI("Sound Sensor", "Peak1 3 :%d", peak3);
+      ESP_LOGI("Sound Sensor", "Peak1 4 :%d", peak4);
     }
+    if ((peak1 >= 2900 - 30 && peak1 <= 2900 + 30) || (peak1 >= 960 - 30 && peak1 <= 960 + 30)) {
+      ESP_LOGI("Sound Sensor", "Peak2 1 :%d", peak1);
+      ESP_LOGI("Sound Sensor", "Peak2 2 :%d", peak2);
+      ESP_LOGI("Sound Sensor", "Peak2 3 :%d", peak3);
+      ESP_LOGI("Sound Sensor", "Peak2 4 :%d", peak4);
+    }
+
+      
+      // if (peak >= 2070 - 30 && peak <= 2070 + 30) {
+      //   double peaks[4];
+      //   fft.TopPeaks(peaks, 4);
+      //     ESP_LOGI("Sound Sensor", "MajorPeak: %d", peak);
+      //     ESP_LOGI("Sound Sensor", "Peak 1: %d", (int)floor(peaks[0]));
+      //     ESP_LOGI("Sound Sensor", "Peak 2: %d", (int)floor(peaks[1]));
+      //     ESP_LOGI("Sound Sensor", "Peak 3: %d", (int)floor(peaks[2]));
+      //     ESP_LOGI("Sound Sensor", "Peak 4: %d", (int)floor(peaks[3]));
+      // }
+      
+
+    // unsigned int peak = (int)floor(fft.MajorPeak());
+    // if ((peak >= 2070 - 30 && peak <= 2070 + 30) || (peak >= 690 - 30 && peak <= 690 + 30) || (peak >= 3440 - 30 && peak <= 3440 + 30)) {
+    //   ESP_LOGI("Sound Sensor", "Peak 1: %d", peak);
+    //   int bin = (int)(peak / 15.625);
+    //   real[bin - 2] = 0;
+    //   real[bin - 1] = 0;
+    //   real[bin] = 0;
+    //   real[bin + 1] = 0;
+    //   real[bin + 2] = 0;
+    //   peak = (int)floor(fft.MajorPeak());
+    //   ESP_LOGI("Sound Sensor", "Peak 2: %d", peak);
+    //   bin = (int)(peak / 15.625);
+    //   real[bin - 2] = 0;
+    //   real[bin - 1] = 0;
+    //   real[bin] = 0;
+    //   real[bin + 1] = 0;
+    //   real[bin + 2] = 0;
+    //   peak = (int)floor(fft.MajorPeak());
+    //   ESP_LOGI("Sound Sensor", "Peak 3: %d", peak);
+    //   bin = (int)(peak / 15.625);
+    //   real[bin - 2] = 0;
+    //   real[bin - 1] = 0;
+    //   real[bin] = 0;
+    //   real[bin + 1] = 0;
+    //   real[bin + 2] = 0;
+    //   peak = (int)floor(fft.MajorPeak());
+    //   ESP_LOGI("Sound Sensor", "Peak 4: %d", peak);
+    // }
   
     // detect_doorbell_frequency(peak, real);
     // // ESP_LOGI("Sound Sensor", "%d", peak);
