@@ -38,7 +38,7 @@ binary_sensor:
     lambda: |-
       auto sound_sensor = new SoundSensor();
       App.register_component(sound_sensor);
-      return {sound_sensor};
+      return {sound_sensor->sound_recognition_sensor};
 
     binary_sensors:
       name: "Sound Sensor"
