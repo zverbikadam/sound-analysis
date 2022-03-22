@@ -1,12 +1,11 @@
 esphome:
-  name: sound-analyzer
+  name: dwt-analyzer
   platform: ESP32
   board: esp32dev
   includes:
-    - sound_recognition/main.h
-    - sound_recognition/config.h
+    - dwt_analysis/main.h
   libraries:
-    - arduinoFFT=https://gitlab.nsoric.com/Adam/FFTdev.git
+    - wavelib=https://github.com/rafat/wavelib.git
 
 mqtt:
   broker: !secret mqtt_broker
@@ -28,7 +27,7 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Sound-Analyzer Fallback Hotspot"
+    ssid: "DWT-Analyzer Fallback Hotspot"
     password: "OZPDjBEO7QfA"
 
 captive_portal:
@@ -36,9 +35,9 @@ captive_portal:
 binary_sensor:
   - platform: custom
     lambda: |-
-      auto sound_sensor = new SoundSensor();
-      App.register_component(sound_sensor);
-      return {sound_sensor->sound_recognition_sensor};
+      auto dwt_sensor = new DWTSensor();
+      App.register_component(dwt_sensor);
+      return {dwt_sensor};
 
     binary_sensors:
-      name: "Sound Sensor"
+      name: "DWT Sensor"
