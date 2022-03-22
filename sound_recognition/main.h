@@ -13,6 +13,7 @@ double **major_frequencies_in_time;
 const byte range = 30;
 
 int counter;
+bool wasDetected;
 
 uint32_t buffer32[SAMPLES];
 
@@ -139,6 +140,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     init_i2s();
 
     counter = 0;
+    wasDetected = false;
     major_frequencies_in_time = new double*[number_of_samples_in_time];
     for(int i = 0; i < number_of_samples_in_time; i++) {
       major_frequencies_in_time[i] = new double[number_of_top_frequencies];
@@ -165,11 +167,21 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     fft.TopPeaks(major_frequencies_in_time[counter], 4);
 
     if(is_doorbell_detected(major_frequencies_in_time)) {
-      ESP_LOGI("Sound Sensor", "Frequency detected");
+      if (!wasDetected) {
+        wasDetected = true;
+        sound_recognition_sensor->publish_state(1);
+      }
+    }
+    else {
+      if (wasDetected) {
+        wasDetected = false;
+        sound_recognition_sensor->publish_state(0);
+      }
     }
 
-    if (counter > 6) 
+    if (counter > 6) {
       counter = 0;
+    }
     else
       counter++;
   }
