@@ -5,7 +5,7 @@
 
 const byte number_of_top_frequencies = 4;
 // 1 FFT = 0.064s, so 8*0.064 = 0.512 (half of second)
-const byte number_of_samples_in_time = 8;
+const byte number_of_samples_in_time = 10;
 
 int doorbell_frequencies[5] = {690, 960, 2070, 2900, 3440};
 
@@ -105,15 +105,19 @@ bool is_doorbell_detected(double **frequencies_in_time)
 {
 
   int result = 0;
+  int recognized_in_row = 0;
   for (int i = 0; i <number_of_samples_in_time; i++) {
     for (int j = 0; j < number_of_top_frequencies; j++) {
       int peak = (int) floor(frequencies_in_time[i][j]);
       if(is_within_range(peak)) {
         result++;
+        recognized_in_row++;
       }
     }
+    if(recognized_in_row < i)
+      return false;
   }
-  if (result >= number_of_samples_in_time*2) {
+  if (result >= number_of_samples_in_time * 2) {
     return true;
   }
   return false;
