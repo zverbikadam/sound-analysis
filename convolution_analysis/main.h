@@ -3,6 +3,19 @@
 #include <driver/i2s.h>
 #include <convolution.h>
 
+#include <cstdlib>
+
+double test_arr[512] = { 0 };
+double test2_arr[512] = { 0 };
+static Convolution conv(test_arr, test_arr, 512);
+static Convolution conv2(test_arr, test2_arr, 512);
+
+void generateRandomArray(double* arr) {
+    for (int i = 0; i < 512; i++) {
+        arr[i] = rand() % 1024;
+    }
+}
+
 uint32_t buffer32[SAMPLES];
 
 void init_i2s()
@@ -77,11 +90,23 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     ESP_LOGI("Doorbell Sensor", "Configuring I2S...");
     init_i2s();
 
+    srand(time(NULL));
+
 
     delay(500);
   }
 
   void loop() override {
+    
+    generateRandomArray(test_arr);
+    double result = conv.calculateCrossCorrelation(test_arr, test_arr, 512);
+    ESP_LOGI("Doorbell Sensor", "Self %f", result);
+
+    generateRandomArray(test2_arr);
+    double result1 = conv2.calculateCrossCorrelation(test_arr, test2_arr, 512);
+    ESP_LOGI("Doorbell Sensor", "Diff %f", result1);
+
+    delay(1000);
     
   }
 };
