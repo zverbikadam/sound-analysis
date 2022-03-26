@@ -106,17 +106,13 @@ bool is_doorbell_detected(double **frequencies_in_time)
 {
 
   int result = 0;
-  int recognized_in_row = 0;
   for (int i = 0; i <number_of_samples_in_time; i++) {
     for (int j = 0; j < number_of_top_frequencies; j++) {
       int peak = (int) floor(frequencies_in_time[i][j]);
       if(is_within_range(peak)) {
         result++;
-        recognized_in_row++;
       }
     }
-    if(recognized_in_row < i)
-      return false;
   }
   if (result >= number_of_samples_in_time * 2) {
     return true;
@@ -164,7 +160,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
 
     // get 4 frequencies with biggest amplitude
-    fft.TopPeaks(major_frequencies_in_time[counter], 4);
+    fft.TopPeaks(major_frequencies_in_time[counter], number_of_top_frequencies);
 
     if(is_doorbell_detected(major_frequencies_in_time)) {
       if (!wasDetected) {
@@ -179,7 +175,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       }
     }
 
-    if (counter > 6) {
+    if (counter >= number_of_samples_in_time) {
       counter = 0;
     }
     else
