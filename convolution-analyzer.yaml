@@ -1,0 +1,45 @@
+esphome:
+  name: convolution-analyzer
+  includes:
+    - convolution_analysis/main.h
+    - convolution_analysis/config.h
+  libraries:
+    - arduinoFFT=https://gitlab.nsoric.com/Adam/FFTdev.git
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+mqtt:
+  broker: !secret mqtt_broker
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "535fc1de44ed9f80a8c656e684e7d34a"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Convolution-Analyzer"
+    password: "vHCFVzmsnbLm"
+
+captive_portal:
+
+binary_sensor:
+  - platform: custom
+    lambda: |-
+      auto convolution_sensor = new ConvolutionSensor();
+      App.register_component(convolution_sensor);
+      return {convolution_sensor->convolution_recognition_sensor};
+  
+    binary_sensors:
+      name: "Doorbell sensor"
