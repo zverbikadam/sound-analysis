@@ -6,6 +6,8 @@
 #define PIN_I2S_SD GPIO_NUM_21  // Serial Data
 #define PIN_I2S_SCK GPIO_NUM_26 // Serial Clock
 
+#define PIN_BUTTON GPIO_NUM_4   // Pull-down button
+
 // Config I2S
 #define I2S_PORT I2S_NUM_0
 #define I2S_READ_LEN (16 * 1024)

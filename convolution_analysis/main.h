@@ -2,8 +2,13 @@
 #include <esphome.h>
 #include <driver/i2s.h>
 #include <convolution.h>
+#include <Preferences.h>
 
 #include <cstdlib>
+
+bool isButtonPressed;
+
+Preferences preferences;
 
 double test_arr[512] = { 0 };
 double test2_arr[512] = { 0 };
@@ -75,7 +80,7 @@ void read_data()
   i2s_read(I2S_PORT, (void *) buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
 }
 
-class ConvolutionSensor : public Component, public CustomMQTTDevice, public BinarySensor {
+class ConvolutionSensor : public Component, public BinarySensor {
  public:
 
 // binary sensor with states 0 -> not recognized; 1 -> recognized
@@ -92,11 +97,17 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     srand(time(NULL));
 
+    pinMode(PIN_BUTTON, INPUT);
+    isButtonPressed = false;
+
 
     delay(500);
   }
 
   void loop() override {
+
+    // check if button is pressed
+    isButtonPressed = digitalRead(PIN_BUTTON);
     
     generateRandomArray(test_arr);
     double result = conv.calculateCrossCorrelation(test_arr, test_arr, 512);
