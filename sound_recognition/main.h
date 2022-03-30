@@ -2,6 +2,7 @@
 #include <esphome.h>
 #include <driver/i2s.h>
 #include <arduinoFFT.h>
+#include <math.h>
 
 const byte number_of_top_frequencies = 4;
 // 1 FFT = 0.064s, so 8*0.064 = 0.512 (half of second)
@@ -83,7 +84,7 @@ static void calculate_energy(double *vReal, double *vImag, uint16_t samples)
 {
     for (uint16_t i = 0; i < samples; i++)
     {
-        vReal[i] = sq(vReal[i]) + sq(vImag[i]);
+        vReal[i] = sqrt(sq(vReal[i]) + sq(vImag[i]));
         vImag[i] = 0.0;
     }
 }
