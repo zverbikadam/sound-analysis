@@ -10,10 +10,12 @@ bool isButtonPressed;
 
 Preferences preferences;
 
-double test_arr[512] = { 0 };
-double test2_arr[512] = { 0 };
-static Convolution conv(test_arr, test_arr, 512);
-static Convolution conv2(test_arr, test2_arr, 512);
+int32_t input_signal[2048];
+double convolution_core[2048] = { 0 };
+int32_t learning_buffer[512];
+
+// static Convolution conv(test_arr, test_arr, 512);
+// static Convolution conv2(test_arr, test2_arr, 512);
 
 void generateRandomArray(double* arr) {
     for (int i = 0; i < 512; i++) {
@@ -65,19 +67,36 @@ void init_i2s()
   ESP_LOGI("Doorbell Sensor", "I2S driver installed correctly!");
 }
 
-static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint16_t number_of_samples)
-{
-    for (uint16_t i = 0; i < number_of_samples; i++)
-    {
-        vReal[i] = (signal[i] >> 16) / 1.0;
-        vImag[i] = 0.0;
-    }
-}
+// static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint16_t number_of_samples)
+// {
+//     for (uint16_t i = 0; i < number_of_samples; i++)
+//     {
+//         vReal[i] = (signal[i] >> 16) / 1.0;
+//         vImag[i] = 0.0;
+//     }
+// }
 
 void read_data()
 {
   uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
+  i2s_read(I2S_PORT, (void *) input_signal, sizeof(input_signal), &bytes_read, portMAX_DELAY);
+}
+
+void read_data_learn()
+{
+  uint32_t bytes_read = 0;
+  i2s_read(I2S_PORT, (void *) learning_buffer, sizeof(learning_buffer), &bytes_read, portMAX_DELAY);
+}
+
+void create_convolution_core() {
+  for (int i = 0; i < 512; i++) {
+    convolution_core[i+511] = learning_buffer[i] >> 12;
+    ESP_LOGI("Doorbell Sensor", "%f", convolution_core[i+511]);
+  }
+}
+
+void save_to_memory() {
+  // TODO
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -108,17 +127,11 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     // check if button is pressed
     isButtonPressed = digitalRead(PIN_BUTTON);
-    
     if (isButtonPressed) {
-      generateRandomArray(test_arr);
-      double result = conv.calculateCrossCorrelation(test_arr, test_arr, 512);
-      ESP_LOGI("Doorbell Sensor", "Self %f", result);
-
-      generateRandomArray(test2_arr);
-      double result1 = conv2.calculateCrossCorrelation(test_arr, test2_arr, 512);
-      ESP_LOGI("Doorbell Sensor", "Diff %f", result1);
+      read_data_learn();
+      create_convolution_core();
+      save_to_memory();
     }
-    delay(1000);
-    
+        
   }
 };
