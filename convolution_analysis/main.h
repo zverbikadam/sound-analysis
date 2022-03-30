@@ -109,14 +109,15 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     // check if button is pressed
     isButtonPressed = digitalRead(PIN_BUTTON);
     
-    generateRandomArray(test_arr);
-    double result = conv.calculateCrossCorrelation(test_arr, test_arr, 512);
-    ESP_LOGI("Doorbell Sensor", "Self %f", result);
+    if (isButtonPressed) {
+      generateRandomArray(test_arr);
+      double result = conv.calculateCrossCorrelation(test_arr, test_arr, 512);
+      ESP_LOGI("Doorbell Sensor", "Self %f", result);
 
-    generateRandomArray(test2_arr);
-    double result1 = conv2.calculateCrossCorrelation(test_arr, test2_arr, 512);
-    ESP_LOGI("Doorbell Sensor", "Diff %f", result1);
-
+      generateRandomArray(test2_arr);
+      double result1 = conv2.calculateCrossCorrelation(test_arr, test2_arr, 512);
+      ESP_LOGI("Doorbell Sensor", "Diff %f", result1);
+    }
     delay(1000);
     
   }

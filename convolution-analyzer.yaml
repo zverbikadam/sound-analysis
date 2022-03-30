@@ -5,6 +5,7 @@ esphome:
     - convolution_analysis/config.h
   libraries:
     - arduinoFFT=https://gitlab.nsoric.com/Adam/FFTdev.git
+    - Preferences
 
 esp32:
   board: esp32dev
