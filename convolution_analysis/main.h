@@ -9,7 +9,7 @@ Preferences prefs;
 
 bool isButtonPressed;
 
-int32_t learning_buffer[512];
+int32_t learning_buffer[512] = { 0 };
 double convolution_core[SAMPLES] = { 0 };
 
 int32_t input_signal[SAMPLES];
@@ -76,40 +76,32 @@ void read_data_learn() {
   i2s_read(I2S_PORT, (void *) learning_buffer, sizeof(learning_buffer), &bytes_read, portMAX_DELAY);
 }
 
-void create_convolution_core(int32_t *input, double *result) {
-  for (int i = 0; i < 512; i++) {
-    result[i] = (input[i] >> 16) / 1.0;
+void create_convolution_core(int32_t *input, double *result, int start) {
+  for (int i = start; i < start + 512; i++) {
+    result[i] = (input[i - start] >> 16) / 1.0;
   }
 }
 
 void save_to_memory(int32_t * buffer, size_t size) {
   prefs.clear();
-  ESP_LOGI("Doorbell Signal", "Trying to save...");
+  ESP_LOGI("Doorbell Signal", "Saving data to memory...");
   prefs.putBytes("signal", (void *) buffer, size);
-  ESP_LOGI("Doorbell Signal", "Recording of new sample signal done...");
-  
-  // create_convolution_core(learning_buffer, convolution_core);
 }
 
-void move_all_indexes_right(double *array, int size) {
-  for (int i = size-1; i > 0; i--) {
-    array[i] = array[i-1];
-  }
-  array[0] = 0;
-}
-
-void analyze(double *input, double* core) {
+void analyze(double *input, int32_t* core) {
   // TODO
   double result = 0;
-  // ESP_LOGI("Doorbell Sensor", "%f", conv.calculateCrossCorrelation(input, input, (uint16_t) SAMPLES));
-  // for (int i = 0; i < 2048 - 512; i++) {
-  //   // ESP_LOGI("Doorbell Sensor","%f",conv.calculateCrossCorrelation());
-  //   result = conv.calculateCrossCorrelation();
-  //   // if (result > 300000) {
-  //     ESP_LOGI("Doorbell Sensor", "%f", result);
-  //   // }
-  //   move_all_indexes_right(core, 2048);
-  // }
+  double max = 0;
+  //
+  for (int i = 0; i < SAMPLES - 512; i++) {
+    create_convolution_core(core, convolution_core, i);
+    result = conv.calculateCrossCorrelation();
+    Serial.println(result);
+    if (result > max) {
+      max = result;
+    }
+  }
+  
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -135,12 +127,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     // get signal from flash
     prefs.getBytes("signal", learning_buffer, signal_length);
-    for (int i = 0; i < 512; i++) {
-        Serial.println(learning_buffer[i]);
-    }
-    // convert to convolution core
-    // create_convolution_core(learning_buffer, convolution_core);
-
+    
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
 
@@ -155,17 +142,14 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
       delay(500);
       read_data_learn();
-      // for (int i = 0; i < 512; i++) {
-      //   Serial.println(learning_buffer[i]);
-      // }
       save_to_memory(learning_buffer, sizeof(learning_buffer));
     }
 
     // // read data
-    // read_data();
-    // process_input_signal(input_signal, processed_input_signal);
+    read_data();
+    process_input_signal(input_signal, processed_input_signal);
 
     // // analyze data
-    // analyze(processed_input_signal, convolution_core);
+    analyze(processed_input_signal, learning_buffer);
   }
 };
