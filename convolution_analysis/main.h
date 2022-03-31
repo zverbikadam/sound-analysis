@@ -9,7 +9,9 @@ Preferences prefs;
 
 bool isButtonPressed;
 
-int32_t learning_buffer[512] = { 0 };
+const int conv_core_len = 512;
+
+int32_t learning_buffer[conv_core_len] = { 0 };
 double convolution_core[SAMPLES] = { 0 };
 
 int32_t input_signal[SAMPLES];
@@ -77,7 +79,7 @@ void read_data_learn() {
 }
 
 void create_convolution_core(int32_t *input, double *result, int start) {
-  for (int i = start; i < start + 512; i++) {
+  for (int i = start; i < start + conv_core_len; i++) {
     result[i] = (input[i - start] >> 16) / 1.0;
   }
 }
@@ -93,15 +95,14 @@ void analyze(double *input, int32_t* core) {
   double result = 0;
   double max = 0;
   //
-  for (int i = 0; i < SAMPLES - 512; i++) {
+  for (int i = 0; i < SAMPLES - conv_core_len; i++) {
     create_convolution_core(core, convolution_core, i);
     result = conv.calculateCrossCorrelation();
-    Serial.println(result);
     if (result > max) {
       max = result;
     }
   }
-  
+  Serial.println(max);
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
