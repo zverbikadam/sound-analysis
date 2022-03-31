@@ -9,13 +9,13 @@ Preferences prefs;
 
 bool isButtonPressed;
 
-int32_t *learning_buffer;
+int32_t learning_buffer[512];
 double convolution_core[SAMPLES] = { 0 };
 
 int32_t input_signal[SAMPLES];
 double processed_input_signal[SAMPLES];
 
-Convolution conv(processed_input_signal, convolution_core, SAMPLES);
+Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAMPLES);
 
 void init_i2s() {
   esp_err_t err;
@@ -66,34 +66,50 @@ static void process_input_signal(int32_t *input, double *result)
     }
 }
 
-void read_data(int32_t *buffer, size_t size) {
+void read_data() {
   uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) buffer, size, &bytes_read, portMAX_DELAY);
+  i2s_read(I2S_PORT, (void *) input_signal, sizeof(input_signal), &bytes_read, portMAX_DELAY);
 }
 
-void read_data_learn(int32_t *buffer, size_t size) {
-  ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
+void read_data_learn() {
   uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) buffer, size, &bytes_read, portMAX_DELAY);
+  i2s_read(I2S_PORT, (void *) learning_buffer, sizeof(learning_buffer), &bytes_read, portMAX_DELAY);
 }
 
 void create_convolution_core(int32_t *input, double *result) {
   for (int i = 0; i < 512; i++) {
-    result[i+511] = (input[i] >> 16) / 1.0;
+    result[i] = (input[i] >> 16) / 1.0;
   }
 }
 
 void save_to_memory(int32_t * buffer, size_t size) {
   prefs.clear();
+  ESP_LOGI("Doorbell Signal", "Trying to save...");
   prefs.putBytes("signal", (void *) buffer, size);
   ESP_LOGI("Doorbell Signal", "Recording of new sample signal done...");
-  delete[] buffer;
-  prefs.end();
-  ESP.restart();
+  
+  // create_convolution_core(learning_buffer, convolution_core);
 }
 
-void analyze() {
+void move_all_indexes_right(double *array, int size) {
+  for (int i = size-1; i > 0; i--) {
+    array[i] = array[i-1];
+  }
+  array[0] = 0;
+}
+
+void analyze(double *input, double* core) {
   // TODO
+  double result = 0;
+  // ESP_LOGI("Doorbell Sensor", "%f", conv.calculateCrossCorrelation(input, input, (uint16_t) SAMPLES));
+  // for (int i = 0; i < 2048 - 512; i++) {
+  //   // ESP_LOGI("Doorbell Sensor","%f",conv.calculateCrossCorrelation());
+  //   result = conv.calculateCrossCorrelation();
+  //   // if (result > 300000) {
+  //     ESP_LOGI("Doorbell Sensor", "%f", result);
+  //   // }
+  //   move_all_indexes_right(core, 2048);
+  // }
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -116,16 +132,14 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     
     size_t signal_length = prefs.getBytes("signal", NULL, NULL);
     ESP_LOGI("Doorbell Sensor", "Signal length %d", signal_length);
-    learning_buffer = new int32_t[signal_length];
 
-    if (learning_buffer == NULL) {
-      ESP_LOGE("Doorbell Sensor", "Not enough memory.");
-      while(1);
-    }
     // get signal from flash
     prefs.getBytes("signal", learning_buffer, signal_length);
+    for (int i = 0; i < 512; i++) {
+        Serial.println(learning_buffer[i]);
+    }
     // convert to convolution core
-    create_convolution_core(learning_buffer, convolution_core);
+    // create_convolution_core(learning_buffer, convolution_core);
 
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -138,15 +152,20 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     // check if button is pressed
     isButtonPressed = digitalRead(PIN_BUTTON);
     if (isButtonPressed) {
-      read_data_learn(learning_buffer, (sizeof(int32_t) * (SAMPLES/4)));
-      save_to_memory(learning_buffer, (sizeof(int32_t)*(SAMPLES/4)));
+      ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
+      delay(500);
+      read_data_learn();
+      // for (int i = 0; i < 512; i++) {
+      //   Serial.println(learning_buffer[i]);
+      // }
+      save_to_memory(learning_buffer, sizeof(learning_buffer));
     }
 
-    // read data
-    read_data(input_signal, sizeof(input_signal));
-    process_input_signal(input_signal, processed_input_signal);
+    // // read data
+    // read_data();
+    // process_input_signal(input_signal, processed_input_signal);
 
-    // analyze data
-    analyze();
+    // // analyze data
+    // analyze(processed_input_signal, convolution_core);
   }
 };
