@@ -10,11 +10,14 @@ Preferences prefs;
 bool isButtonPressed;
 
 int32_t *learning_buffer;
-float convolution_core[SAMPLES] = { 0 };
-int32_t input_signal[SAMPLES];
+double convolution_core[SAMPLES] = { 0 };
 
-void init_i2s()
-{
+int32_t input_signal[SAMPLES];
+double processed_input_signal[SAMPLES];
+
+Convolution conv(processed_input_signal, convolution_core, SAMPLES);
+
+void init_i2s() {
   esp_err_t err;
 
   // Config struct
@@ -55,44 +58,42 @@ void init_i2s()
   ESP_LOGI("Doorbell Sensor", "I2S driver installed correctly!");
 }
 
-// static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint16_t number_of_samples)
-// {
-//     for (uint16_t i = 0; i < number_of_samples; i++)
-//     {
-//         vReal[i] = (signal[i] >> 16) / 1.0;
-//         vImag[i] = 0.0;
-//     }
-// }
-
-void read_data()
+static void process_input_signal(int32_t *input, double *result)
 {
-  uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) input_signal, sizeof(input_signal), &bytes_read, portMAX_DELAY);
+    for (int i = 0; i < SAMPLES; i++)
+    {
+        result[i] = (input[i] >> 16) / 1.0;
+    }
 }
 
-void read_data_learn()
-{
-  
+void read_data(int32_t *buffer, size_t size) {
   uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) learning_buffer, (sizeof(int32_t) * (SAMPLES/4)), &bytes_read, portMAX_DELAY);
+  i2s_read(I2S_PORT, (void *) buffer, size, &bytes_read, portMAX_DELAY);
 }
 
-void create_convolution_core() {
+void read_data_learn(int32_t *buffer, size_t size) {
+  ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
+  uint32_t bytes_read = 0;
+  i2s_read(I2S_PORT, (void *) buffer, size, &bytes_read, portMAX_DELAY);
+}
+
+void create_convolution_core(int32_t *input, double *result) {
   for (int i = 0; i < 512; i++) {
-    convolution_core[i+511] = (learning_buffer[i] >> 16) / 1.0;
+    result[i+511] = (input[i] >> 16) / 1.0;
   }
 }
 
-void save_to_memory() {
-  // prefs.begin("audio", false);
+void save_to_memory(int32_t * buffer, size_t size) {
   prefs.clear();
-  // // // save value
-  prefs.putBytes("signal", (void *) learning_buffer, (sizeof(int32_t)*(SAMPLES/4)));
-
-  delete[] learning_buffer;
+  prefs.putBytes("signal", (void *) buffer, size);
+  ESP_LOGI("Doorbell Signal", "Recording of new sample signal done...");
+  delete[] buffer;
   prefs.end();
   ESP.restart();
+}
 
+void analyze() {
+  // TODO
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -116,16 +117,18 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     size_t signal_length = prefs.getBytes("signal", NULL, NULL);
     ESP_LOGI("Doorbell Sensor", "Signal length %d", signal_length);
     learning_buffer = new int32_t[signal_length];
+
     if (learning_buffer == NULL) {
       ESP_LOGE("Doorbell Sensor", "Not enough memory.");
       while(1);
     }
-    
+    // get signal from flash
     prefs.getBytes("signal", learning_buffer, signal_length);
+    // convert to convolution core
+    create_convolution_core(learning_buffer, convolution_core);
 
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
-
 
     delay(500);
   }
@@ -135,8 +138,15 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     // check if button is pressed
     isButtonPressed = digitalRead(PIN_BUTTON);
     if (isButtonPressed) {
-      read_data_learn();
-      save_to_memory();
+      read_data_learn(learning_buffer, (sizeof(int32_t) * (SAMPLES/4)));
+      save_to_memory(learning_buffer, (sizeof(int32_t)*(SAMPLES/4)));
     }
+
+    // read data
+    read_data(input_signal, sizeof(input_signal));
+    process_input_signal(input_signal, processed_input_signal);
+
+    // analyze data
+    analyze();
   }
 };
