@@ -17,7 +17,7 @@ double convolution_core[SAMPLES] = { 0 };
 int32_t input_signal[SAMPLES];
 double processed_input_signal[SAMPLES];
 
-Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAMPLES);
+Convolution conv(processed_input_signal, convolution_core, (uint16_t) conv_core_len);
 
 void init_i2s() {
   esp_err_t err;
@@ -78,9 +78,9 @@ void read_data_learn() {
   i2s_read(I2S_PORT, (void *) learning_buffer, sizeof(learning_buffer), &bytes_read, portMAX_DELAY);
 }
 
-void create_convolution_core(int32_t *input, double *result, int start) {
-  for (int i = start; i < start + conv_core_len; i++) {
-    result[i] = (input[i - start] >> 16) / 1.0;
+void create_convolution_core(int32_t *input, double *result) {
+  for (int i = 0; i < conv_core_len; i++) {
+    result[i] = (input[i] >> 16) / 1.0;
   }
 }
 
@@ -90,18 +90,24 @@ void save_to_memory(int32_t * buffer, size_t size) {
   prefs.putBytes("signal", (void *) buffer, size);
 }
 
-void analyze(double *input, int32_t* core) {
+void analyze() {
   // TODO
   double result = 0;
   double max = 0;
-  //
-  for (int i = 0; i < SAMPLES - conv_core_len; i++) {
-    create_convolution_core(core, convolution_core, i);
-    result = conv.calculateCrossCorrelation();
+  for (int i = 0; i <SAMPLES - conv_core_len; i++) {
+    result = conv.calculateCorrelationIndex(i);
     if (result > max) {
       max = result;
     }
   }
+  //
+  // for (int i = 0; i < SAMPLES - conv_core_len; i++) {
+  //   create_convolution_core(core, convolution_core, i);
+  //   result = conv.calculateCrossCorrelation();
+  //   if (result > max) {
+  //     max = result;
+  //   }
+  // }
   Serial.println(max);
 }
 
@@ -144,6 +150,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       delay(500);
       read_data_learn();
       save_to_memory(learning_buffer, sizeof(learning_buffer));
+      create_convolution_core(learning_buffer, convolution_core);
     }
 
     // // read data
@@ -151,6 +158,6 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     process_input_signal(input_signal, processed_input_signal);
 
     // // analyze data
-    analyze(processed_input_signal, learning_buffer);
+    analyze();
   }
 };
