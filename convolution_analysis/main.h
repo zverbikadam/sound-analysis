@@ -134,6 +134,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     // get signal from flash
     prefs.getBytes("signal", learning_buffer, signal_length);
+    create_convolution_core(learning_buffer, convolution_core);
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
