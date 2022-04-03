@@ -99,19 +99,26 @@ BinarySensor *convolution_recognition_sensor = new BinarySensor();
 float get_setup_priority() const override { return esphome::setup_priority::AFTER_CONNECTION; }
 
   void setup() override {
-
-    prefs.begin("audio", false); // false stands for read-write mode; true is for read-only
-    
-    // start up the I2S peripheral
+     // start up the I2S peripheral
     ESP_LOGI("Doorbell Sensor", "Configuring I2S...");
     init_i2s();
 
+    prefs.begin("audio", false); // false stands for read-write mode; true is for read-only
     
     size_t signal_length = prefs.getBytes("signal", NULL, NULL);
-    ESP_LOGI("Doorbell Sensor", "Signal length %d", signal_length);
-
-    // get signal from flash
-    prefs.getBytes("signal", learning_buffer, signal_length);
+    if (signal_length > 0) {
+      ESP_LOGI("Doorbell Sensor", "Saved signal length %d", signal_length);
+      ESP_LOGI("Doorbell Sensor", "Signal buffer length %d", sizeof(learning_buffer));
+      // get signal from flash
+      if (signal_length <= sizeof(learning_buffer)) {
+        prefs.getBytes("signal", learning_buffer, signal_length);
+      } else {
+        ESP_LOGE("Doorbell Sensor", "Saved signal size is bigger than learning_buffer. Clearing memory and restarting ESP...");
+        prefs.clear();
+        ESP.restart();
+      }
+    }
+      
     process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
     
     pinMode(PIN_BUTTON, INPUT);

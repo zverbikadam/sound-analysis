@@ -24,7 +24,7 @@
 //Number of measurements we use for calculation
 // The higher the number of samples, the more accurate frequencies we can detect. However, more samples = more computation
 
-#define INPUT_SIGNAL_SAMPLES 2048    // always power of 2
-#define SAVED_SIGNAL_SAMPLES 512    // always power of 2
+#define INPUT_SIGNAL_SAMPLES 1024    // always power of 2
+#define SAVED_SIGNAL_SAMPLES 256    // always power of 2
 
 #endif
