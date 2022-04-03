@@ -6,18 +6,15 @@
 
 Preferences prefs;
 
-
 bool isButtonPressed;
 
-const int conv_core_len = 512;
+int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
+double convolution_core[INPUT_SIGNAL_SAMPLES] = { 0 };
 
-int32_t learning_buffer[conv_core_len] = { 0 };
-double convolution_core[SAMPLES] = { 0 };
+int32_t input_signal[INPUT_SIGNAL_SAMPLES];
+double processed_input_signal[INPUT_SIGNAL_SAMPLES];
 
-int32_t input_signal[SAMPLES];
-double processed_input_signal[SAMPLES];
-
-Convolution conv(processed_input_signal, convolution_core, (uint16_t) conv_core_len);
+Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAVED_SIGNAL_SAMPLES);
 
 void init_i2s() {
   esp_err_t err;
@@ -68,23 +65,10 @@ void process_signal(int32_t *input, double *result, int size)
     }
 }
 
-// void create_convolution_core(int32_t *input, double *result) {
-//   for (int i = 0; i < conv_core_len; i++) {
-//     result[i] = (input[i] >> 16) / 1.0;
-//   }
-// }
-
 void read_data(int32_t *signal, size_t signal_size) {
   uint32_t bytes_read = 0;
   i2s_read(I2S_PORT, (void *) signal, signal_size, &bytes_read, portMAX_DELAY);
 }
-
-// void read_data_learn() {
-//   uint32_t bytes_read = 0;
-//   i2s_read(I2S_PORT, (void *) learning_buffer, sizeof(learning_buffer), &bytes_read, portMAX_DELAY);
-// }
-
-
 
 void save_to_memory(int32_t *signal, size_t size) {
   prefs.clear();
@@ -96,7 +80,7 @@ void analyze() {
   // TODO
   double result = 0;
   double max = 0;
-  for (int i = 0; i <SAMPLES - conv_core_len; i++) {
+  for (int i = 0; i <INPUT_SIGNAL_SAMPLES - SAVED_SIGNAL_SAMPLES; i++) {
     result = conv.calculateCorrelationIndex(i);
     if (result > max) {
       max = result;
@@ -128,7 +112,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     // get signal from flash
     prefs.getBytes("signal", learning_buffer, signal_length);
-    process_signal(learning_buffer, convolution_core, conv_core_len);
+    process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -145,14 +129,14 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       delay(500);
       read_data(learning_buffer, sizeof(learning_buffer));
       save_to_memory(learning_buffer, sizeof(learning_buffer));
-      process_signal(learning_buffer, convolution_core, conv_core_len);
+      process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
     }
 
-    // // read data
+    // read data
     read_data(input_signal, sizeof(input_signal));
-    process_signal(input_signal, processed_input_signal, SAMPLES);
+    process_signal(input_signal, processed_input_signal, INPUT_SIGNAL_SAMPLES);
 
-    // // analyze data
+    // analyze data
     analyze();
   }
 };
