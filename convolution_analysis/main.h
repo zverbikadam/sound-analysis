@@ -57,9 +57,9 @@ void init_i2s() {
   ESP_LOGI("Doorbell Sensor", "I2S driver installed correctly!");
 }
 
-void process_signal(int32_t *input, double *result, int size)
+void process_signal(int32_t *input, double *result, int number_of_samples)
 {
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < number_of_samples; i++)
     {
         result[i] = (input[i] >> 16) / 1.0;
     }
