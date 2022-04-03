@@ -19,7 +19,7 @@ bool wasDetected;
 uint32_t buffer32[SAMPLES];
 
 static double real[SAMPLES];
-static double imag[SAMPLES];
+static double imag[SAMPLES] = { 0.0 };
 static arduinoFFT fft(real, imag, (uint16_t) SAMPLES, (double) SAMPLE_RATE);
 
 void init_i2s()
@@ -64,19 +64,18 @@ void init_i2s()
   ESP_LOGI("Sound Sensor", "I2S driver installed correctly!");
 }
 
-static void prepare_for_fft(uint32_t *signal, double *vReal, double *vImag, uint16_t number_of_samples)
+static void process_signal(uint32_t *input, double *result, int number_of_samples)
 {
-    for (uint16_t i = 0; i < number_of_samples; i++)
+    for (int i = 0; i < number_of_samples; i++)
     {
-        vReal[i] = (signal[i] >> 16) / 1.0;
-        vImag[i] = 0.0;
+        result[i] = (input[i] >> 16) / 1.0;
     }
 }
 
-void read_data()
+void read_data(uint32_t *signal, size_t signal_size)
 {
   uint32_t bytes_read = 0;
-  i2s_read(I2S_PORT, (void *) buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
+  i2s_read(I2S_PORT, (void *) signal, signal_size, &bytes_read, portMAX_DELAY);
 }
 
 // calculates energy from Re and Im parts and places it back in the Re part (Im part is zeroed)
@@ -107,7 +106,7 @@ bool is_doorbell_detected(double **frequencies_in_time)
 {
 
   int result = 0;
-  for (int i = 0; i <number_of_samples_in_time; i++) {
+  for (int i = 0; i < number_of_samples_in_time; i++) {
     for (int j = 0; j < number_of_top_frequencies; j++) {
       int peak = (int) floor(frequencies_in_time[i][j]);
       if(is_within_range(peak)) {
@@ -115,7 +114,7 @@ bool is_doorbell_detected(double **frequencies_in_time)
       }
     }
   }
-  if (result >= number_of_samples_in_time * 2) {
+  if ((result >= (int) number_of_samples_in_time * 1.5)) {
     return true;
   }
   return false;
@@ -142,15 +141,18 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     for(int i = 0; i < number_of_samples_in_time; i++) {
       major_frequencies_in_time[i] = new double[number_of_top_frequencies];
     }
+    if (major_frequencies_in_time == NULL) {
+      ESP_LOGE("Sound Sensor", "Not enough memory.");
+    }
 
     delay(500);
   }
 
   void loop() override {
     // read data from i2s
-    read_data();
+    read_data(buffer32, sizeof(buffer32));
 
-    prepare_for_fft(buffer32, real, imag, SAMPLES);
+    process_signal(buffer32, real, SAMPLES);
 
     // FFT_WIN_TYP_FLT_TOP - flat top windowing method; FFT_FORWARD = 0x01
     fft.Windowing(FFT_WIN_TYP_FLT_TOP, FFT_FORWARD);
@@ -176,10 +178,10 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       }
     }
 
-    if (counter >= number_of_samples_in_time) {
+    if (counter > 6) {
       counter = 0;
-    }
-    else
+    } else {
       counter++;
+    }
   }
 };
