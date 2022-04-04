@@ -4,11 +4,11 @@
 #include <arduinoFFT.h>
 #include <math.h>
 
-const byte number_of_top_frequencies = 4;
+const byte NUMBER_OF_TOP_FREQUENCIES = 4;
 // 1 FFT = 0.064s, so 8*0.064 = 0.512 (half of second)
-const byte number_of_samples_in_time = 10;
+const byte NUMBER_OF_SAMPLES_IN_TIME = 10;
 
-int doorbell_frequencies[5] = {690, 960, 2070, 2900, 3440};
+const int DOORBELL_FEQUENCIES[5] = {690, 960, 2070, 2900, 3440};
 
 double **major_frequencies_in_time;
 const byte range = 30;
@@ -89,15 +89,15 @@ static void calculate_energy(double *vReal, double *vImag, uint16_t samples)
 }
 
 bool is_within_range(int peak) {
-  if ((peak >= doorbell_frequencies[0] - range) && (peak <= doorbell_frequencies[0] + range)) 
+  if ((peak >= DOORBELL_FEQUENCIES[0] - range) && (peak <= DOORBELL_FEQUENCIES[0] + range)) 
     return true;
-  if ((peak >= doorbell_frequencies[1] - range) && (peak <= doorbell_frequencies[1] + range)) 
+  if ((peak >= DOORBELL_FEQUENCIES[1] - range) && (peak <= DOORBELL_FEQUENCIES[1] + range)) 
     return true;
-  if ((peak >= doorbell_frequencies[2] - range) && (peak <= doorbell_frequencies[2] + range)) 
+  if ((peak >= DOORBELL_FEQUENCIES[2] - range) && (peak <= DOORBELL_FEQUENCIES[2] + range)) 
     return true;
-  if ((peak >= doorbell_frequencies[3] - range) && (peak <= doorbell_frequencies[3] + range)) 
+  if ((peak >= DOORBELL_FEQUENCIES[3] - range) && (peak <= DOORBELL_FEQUENCIES[3] + range)) 
     return true;
-  if ((peak >= doorbell_frequencies[4] - range) && (peak <= doorbell_frequencies[4] + range)) 
+  if ((peak >= DOORBELL_FEQUENCIES[4] - range) && (peak <= DOORBELL_FEQUENCIES[4] + range)) 
     return true;
   return false;
 }
@@ -106,15 +106,15 @@ bool is_doorbell_detected(double **frequencies_in_time)
 {
 
   int result = 0;
-  for (int i = 0; i < number_of_samples_in_time; i++) {
-    for (int j = 0; j < number_of_top_frequencies; j++) {
+  for (int i = 0; i < NUMBER_OF_SAMPLES_IN_TIME; i++) {
+    for (int j = 0; j < NUMBER_OF_TOP_FREQUENCIES; j++) {
       int peak = (int) floor(frequencies_in_time[i][j]);
       if(is_within_range(peak)) {
         result++;
       }
     }
   }
-  if ((result >= (int) number_of_samples_in_time * 1.5)) {
+  if ((result >= (int) NUMBER_OF_SAMPLES_IN_TIME * 1.5)) {
     return true;
   }
   return false;
@@ -137,9 +137,9 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
     counter = 0;
     wasDetected = false;
-    major_frequencies_in_time = new double*[number_of_samples_in_time];
-    for(int i = 0; i < number_of_samples_in_time; i++) {
-      major_frequencies_in_time[i] = new double[number_of_top_frequencies];
+    major_frequencies_in_time = new double*[NUMBER_OF_SAMPLES_IN_TIME];
+    for(int i = 0; i < NUMBER_OF_SAMPLES_IN_TIME; i++) {
+      major_frequencies_in_time[i] = new double[NUMBER_OF_TOP_FREQUENCIES];
     }
     if (major_frequencies_in_time == NULL) {
       ESP_LOGE("Sound Sensor", "Not enough memory.");
@@ -163,7 +163,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
 
     // get 4 frequencies with biggest amplitude
-    fft.TopPeaks(major_frequencies_in_time[counter], number_of_top_frequencies);
+    fft.TopPeaks(major_frequencies_in_time[counter], NUMBER_OF_TOP_FREQUENCIES);
 
     if(is_doorbell_detected(major_frequencies_in_time)) {
       if (!wasDetected) {
