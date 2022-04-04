@@ -172,10 +172,8 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       }
     }
     else {
-      if (wasDetected) {
-        wasDetected = false;
-        sound_recognition_sensor->publish_state(0);
-      }
+      wasDetected = false;
+      sound_recognition_sensor->publish_state(0);
     }
 
     if (counter > 6) {
