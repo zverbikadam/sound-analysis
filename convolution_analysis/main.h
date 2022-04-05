@@ -9,10 +9,11 @@ Preferences prefs;
 bool isButtonPressed;
 
 int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
-double convolution_core[INPUT_SIGNAL_SAMPLES] = { 0 };
+int16_t maximum_amplitude_in_learning_buffer = 0;
+// double convolution_core[INPUT_SIGNAL_SAMPLES] = { 0 };
 
 int32_t input_signal[INPUT_SIGNAL_SAMPLES];
-double processed_input_signal[INPUT_SIGNAL_SAMPLES];
+// double processed_input_signal[INPUT_SIGNAL_SAMPLES];
 
 Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAVED_SIGNAL_SAMPLES);
 
@@ -57,12 +58,18 @@ void init_i2s() {
   ESP_LOGI("Doorbell Sensor", "I2S driver installed correctly!");
 }
 
-void process_signal(int32_t *input, double *result, int number_of_samples)
+int16_t process_signal_and_get_max_amplitude(int32_t *signal, int number_of_samples)
 {
+  int16_t max = 0;
     for (int i = 0; i < number_of_samples; i++)
     {
-        result[i] = (input[i] >> 16) / 1.0;
+        signal[i] = signal[i] >> 16;
+        if (signal[i] > max) {
+          max = signal[i];
+        }
     }
+
+    return max;
 }
 
 void read_data(int32_t *signal, size_t signal_size) {
@@ -112,14 +119,13 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       // get signal from flash
       if (signal_length <= sizeof(learning_buffer)) {
         prefs.getBytes("signal", learning_buffer, signal_length);
+        maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
       } else {
         ESP_LOGE("Doorbell Sensor", "Saved signal size is bigger than learning_buffer. Clearing memory and restarting ESP...");
         prefs.clear();
         ESP.restart();
       }
-    }
-      
-    process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
+    } 
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -136,12 +142,12 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       delay(500);
       read_data(learning_buffer, sizeof(learning_buffer));
       save_to_memory(learning_buffer, sizeof(learning_buffer));
-      process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
+      maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
     }
 
     // read data
     read_data(input_signal, sizeof(input_signal));
-    process_signal(input_signal, processed_input_signal, INPUT_SIGNAL_SAMPLES);
+    int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
 
     // analyze data
     analyze();
