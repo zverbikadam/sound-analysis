@@ -15,7 +15,7 @@ int16_t maximum_amplitude_in_learning_buffer = 0;
 int32_t input_signal[INPUT_SIGNAL_SAMPLES];
 // double processed_input_signal[INPUT_SIGNAL_SAMPLES];
 
-Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAVED_SIGNAL_SAMPLES);
+Convolution conv(input_signal, learning_buffer, SAVED_SIGNAL_SAMPLES);
 
 void init_i2s() {
   esp_err_t err;
@@ -83,17 +83,17 @@ void save_to_memory(int32_t *signal, size_t size) {
   prefs.putBytes("signal", (void *) signal, size);
 }
 
-void analyze() {
+void analyze(float ratio) {
   // TODO
   double result = 0;
   double max = 0;
   for (int i = 0; i <INPUT_SIGNAL_SAMPLES - SAVED_SIGNAL_SAMPLES; i++) {
-    result = conv.calculateCorrelationIndex(i);
+    result = conv.calculateCorrelationIndex(i, ratio);
     if (result > max) {
       max = result;
     }
   }
-  Serial.println(max);
+  // Serial.println(max);
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -149,7 +149,10 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     read_data(input_signal, sizeof(input_signal));
     int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
 
+    float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
+    Serial.println(amplitude_ratio);
+
     // analyze data
-    analyze();
+    analyze(amplitude_ratio);
   }
 };
