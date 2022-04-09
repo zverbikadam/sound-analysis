@@ -1,7 +1,6 @@
 #include "config.h"
 #include <esphome.h>
 #include <driver/i2s.h>
-#include <convolution.h>
 #include <Preferences.h>
 
 Preferences prefs;
@@ -10,12 +9,8 @@ bool isButtonPressed;
 
 int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
 int16_t maximum_amplitude_in_learning_buffer = 0;
-// double convolution_core[INPUT_SIGNAL_SAMPLES] = { 0 };
 
 int32_t input_signal[INPUT_SIGNAL_SAMPLES];
-// double processed_input_signal[INPUT_SIGNAL_SAMPLES];
-
-Convolution conv(input_signal, learning_buffer, SAVED_SIGNAL_SAMPLES);
 
 void init_i2s() {
   esp_err_t err;
@@ -83,25 +78,25 @@ void save_to_memory(int32_t *signal, size_t size) {
   prefs.putBytes("signal", (void *) signal, size);
 }
 
-// double calculateCorrelationIndex(int index, float ratio_koefficient) {
-//     if (ratio_koefficient == NULL) {
-//         ratio_koefficient = 1.0;
-//     }
-//     double result = 0;
+double calculateCorrelationIndex(int index, float ratio_koefficient) {
+    if (ratio_koefficient == NULL) {
+        ratio_koefficient = 1.0;
+    }
+    double result = 0;
 
-//     for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
-//         result += (input_signal[i] * (learning_buffer[i-index] / ratio_koefficient));
-//     }
+    for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
+        result += (input_signal[i] * (learning_buffer[i-index] / ratio_koefficient));
+    }
 
-//     return (result / SAVED_SIGNAL_SAMPLES);
-// }
+    return (result / SAVED_SIGNAL_SAMPLES);
+}
 
 void analyze(float ratio) {
   // TODO
   double result = 0;
   double max = 0;
   for (int i = 0; i <INPUT_SIGNAL_SAMPLES - SAVED_SIGNAL_SAMPLES; i++) {
-    result = conv.calculateCorrelationIndex(i, ratio);
+    result = calculateCorrelationIndex(i, ratio);
     if (result > max) {
       max = result;
     }
@@ -163,8 +158,6 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
 
     float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
-
-    // Serial.println(amplitude_ratio);
 
     // analyze data
     analyze(amplitude_ratio);
