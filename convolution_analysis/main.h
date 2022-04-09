@@ -1,20 +1,21 @@
 #include "config.h"
 #include <esphome.h>
 #include <driver/i2s.h>
-#include <convolution.h>
 #include <Preferences.h>
 
 Preferences prefs;
 
-bool isButtonPressed;
+static bool isButtonPressed;
+static bool wasDetected;
 
-int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
-double convolution_core[INPUT_SIGNAL_SAMPLES] = { 0 };
+static int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
+static int16_t maximum_amplitude_in_learning_buffer = 0;
 
-int32_t input_signal[INPUT_SIGNAL_SAMPLES];
-double processed_input_signal[INPUT_SIGNAL_SAMPLES];
+static int32_t input_signal[INPUT_SIGNAL_SAMPLES];
 
-Convolution conv(processed_input_signal, convolution_core, (uint16_t) SAVED_SIGNAL_SAMPLES);
+static double max_correlation_value;
+
+const float delta = 0.8;
 
 void init_i2s() {
   esp_err_t err;
@@ -57,12 +58,18 @@ void init_i2s() {
   ESP_LOGI("Doorbell Sensor", "I2S driver installed correctly!");
 }
 
-void process_signal(int32_t *input, double *result, int number_of_samples)
+int16_t process_signal_and_get_max_amplitude(int32_t *signal, int number_of_samples)
 {
+  int16_t max = 0;
     for (int i = 0; i < number_of_samples; i++)
     {
-        result[i] = (input[i] >> 16) / 1.0;
+        signal[i] = signal[i] >> 16;
+        if (signal[i] > max) {
+          max = signal[i];
+        }
     }
+
+    return max;
 }
 
 void read_data(int32_t *signal, size_t signal_size) {
@@ -70,23 +77,50 @@ void read_data(int32_t *signal, size_t signal_size) {
   i2s_read(I2S_PORT, (void *) signal, signal_size, &bytes_read, portMAX_DELAY);
 }
 
-void save_to_memory(int32_t *signal, size_t size) {
+void save_to_memory(int32_t *signal, size_t size, double correlation_value) {
   prefs.clear();
   ESP_LOGI("Doorbell Signal", "Saving data to memory...");
   prefs.putBytes("signal", (void *) signal, size);
+  prefs.putDouble("corr-value", correlation_value);
 }
 
-void analyze() {
+double calculateCorrelationIndex(int index, float ratio_koefficient) {
+    if (ratio_koefficient == NULL) {
+        ratio_koefficient = 1.0;
+    }
+    double result = 0;
+
+    for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
+        result += (input_signal[i] * (learning_buffer[i-index] / ratio_koefficient));
+    }
+
+    return (result / SAVED_SIGNAL_SAMPLES);
+}
+
+double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, int index, float ratio_koefficient) {
+    if (ratio_koefficient == NULL) {
+        ratio_koefficient = 1.0;
+    }
+    double result = 0;
+
+    for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
+        result += (first_signal[i] * (second_signal[i-index] / ratio_koefficient));
+    }
+
+    return (result / SAVED_SIGNAL_SAMPLES);
+}
+
+double analyze(float ratio) {
   // TODO
   double result = 0;
   double max = 0;
   for (int i = 0; i <INPUT_SIGNAL_SAMPLES - SAVED_SIGNAL_SAMPLES; i++) {
-    result = conv.calculateCorrelationIndex(i);
+    result = calculateCorrelationIndex(i, ratio);
     if (result > max) {
       max = result;
     }
   }
-  Serial.println(max);
+  return max;
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -112,14 +146,17 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       // get signal from flash
       if (signal_length <= sizeof(learning_buffer)) {
         prefs.getBytes("signal", learning_buffer, signal_length);
+        maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
       } else {
         ESP_LOGE("Doorbell Sensor", "Saved signal size is bigger than learning_buffer. Clearing memory and restarting ESP...");
         prefs.clear();
         ESP.restart();
       }
     }
-      
-    process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
+    
+    max_correlation_value = prefs.getDouble("corr-value", 0.0); 
+
+    wasDetected = false;
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -134,16 +171,32 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     if (isButtonPressed) {
       ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
       delay(500);
+
       read_data(learning_buffer, sizeof(learning_buffer));
-      save_to_memory(learning_buffer, sizeof(learning_buffer));
-      process_signal(learning_buffer, convolution_core, SAVED_SIGNAL_SAMPLES);
+      maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
+      
+      max_correlation_value = calculateCorrelationIndex(learning_buffer, learning_buffer, 0, NULL);
+      
+      save_to_memory(learning_buffer, sizeof(learning_buffer), max_correlation_value);
+    } else {
+      // read data
+      read_data(input_signal, sizeof(input_signal));
+      int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
+
+      float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
+
+      // analyze data
+      if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
+        wasDetected = true;
+        convolution_recognition_sensor->publish_state(1);
+      } else {
+        wasDetected = false;
+        convolution_recognition_sensor->publish_state(0);
+      }
+
+      if (wasDetected) {
+        delay(2000);
+      }
     }
-
-    // read data
-    read_data(input_signal, sizeof(input_signal));
-    process_signal(input_signal, processed_input_signal, INPUT_SIGNAL_SAMPLES);
-
-    // analyze data
-    analyze();
   }
 };
