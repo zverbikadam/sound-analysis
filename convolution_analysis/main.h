@@ -6,6 +6,7 @@
 Preferences prefs;
 
 static bool isButtonPressed;
+static bool wasDetected;
 
 static int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
 static int16_t maximum_amplitude_in_learning_buffer = 0;
@@ -14,7 +15,7 @@ static int32_t input_signal[INPUT_SIGNAL_SAMPLES];
 
 static double max_correlation_value;
 
-const float delta = 0.9;
+const float delta = 0.8;
 
 void init_i2s() {
   esp_err_t err;
@@ -154,6 +155,8 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     }
     
     max_correlation_value = prefs.getDouble("corr-value", 0.0); 
+
+    wasDetected = false;
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -184,7 +187,15 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
       // analyze data
       if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
-        Serial.println("Signal recognized");
+        wasDetected = true;
+        convolution_recognition_sensor->publish_state(1);
+      } else {
+        wasDetected = false;
+        convolution_recognition_sensor->publish_state(0);
+      }
+
+      if (wasDetected) {
+        delay(2000);
       }
     }
   }
