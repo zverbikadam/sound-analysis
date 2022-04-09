@@ -5,12 +5,16 @@
 
 Preferences prefs;
 
-bool isButtonPressed;
+static bool isButtonPressed;
 
-int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
-int16_t maximum_amplitude_in_learning_buffer = 0;
+static int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
+static int16_t maximum_amplitude_in_learning_buffer = 0;
 
-int32_t input_signal[INPUT_SIGNAL_SAMPLES];
+static int32_t input_signal[INPUT_SIGNAL_SAMPLES];
+
+static double max_correlation_value;
+
+const float delta = 0.9;
 
 void init_i2s() {
   esp_err_t err;
@@ -72,10 +76,11 @@ void read_data(int32_t *signal, size_t signal_size) {
   i2s_read(I2S_PORT, (void *) signal, signal_size, &bytes_read, portMAX_DELAY);
 }
 
-void save_to_memory(int32_t *signal, size_t size) {
+void save_to_memory(int32_t *signal, size_t size, double correlation_value) {
   prefs.clear();
   ESP_LOGI("Doorbell Signal", "Saving data to memory...");
   prefs.putBytes("signal", (void *) signal, size);
+  prefs.putDouble("corr-value", correlation_value);
 }
 
 double calculateCorrelationIndex(int index, float ratio_koefficient) {
@@ -91,7 +96,20 @@ double calculateCorrelationIndex(int index, float ratio_koefficient) {
     return (result / SAVED_SIGNAL_SAMPLES);
 }
 
-void analyze(float ratio) {
+double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, int index, float ratio_koefficient) {
+    if (ratio_koefficient == NULL) {
+        ratio_koefficient = 1.0;
+    }
+    double result = 0;
+
+    for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
+        result += (first_signal[i] * (second_signal[i-index] / ratio_koefficient));
+    }
+
+    return (result / SAVED_SIGNAL_SAMPLES);
+}
+
+double analyze(float ratio) {
   // TODO
   double result = 0;
   double max = 0;
@@ -101,7 +119,7 @@ void analyze(float ratio) {
       max = result;
     }
   }
-  Serial.println(max);
+  return max;
 }
 
 class ConvolutionSensor : public Component, public BinarySensor {
@@ -133,7 +151,9 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
         prefs.clear();
         ESP.restart();
       }
-    } 
+    }
+    
+    max_correlation_value = prefs.getDouble("corr-value", 0.0); 
     
     pinMode(PIN_BUTTON, INPUT);
     isButtonPressed = false;
@@ -148,18 +168,24 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     if (isButtonPressed) {
       ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
       delay(500);
+
       read_data(learning_buffer, sizeof(learning_buffer));
-      save_to_memory(learning_buffer, sizeof(learning_buffer));
       maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
+      
+      max_correlation_value = calculateCorrelationIndex(learning_buffer, learning_buffer, 0, NULL);
+      
+      save_to_memory(learning_buffer, sizeof(learning_buffer), max_correlation_value);
+    } else {
+      // read data
+      read_data(input_signal, sizeof(input_signal));
+      int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
+
+      float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
+
+      // analyze data
+      if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
+        Serial.println("Signal recognized");
+      }
     }
-
-    // read data
-    read_data(input_signal, sizeof(input_signal));
-    int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
-
-    float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
-
-    // analyze data
-    analyze(amplitude_ratio);
   }
 };
