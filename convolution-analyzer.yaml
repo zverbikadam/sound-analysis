@@ -4,7 +4,6 @@ esphome:
     - convolution_analysis/main.h
     - convolution_analysis/config.h
   libraries:
-    - arduinoFFT=https://gitlab.nsoric.com/Adam/FFTdev.git
     - Preferences
 
 esp32:
@@ -25,8 +24,8 @@ ota:
   password: "535fc1de44ed9f80a8c656e684e7d34a"
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  ssid: !secret wifi_tt_ssid
+  password: !secret wifi_tt_password
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
