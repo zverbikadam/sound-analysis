@@ -84,27 +84,27 @@ void save_to_memory(int32_t *signal, size_t size, double correlation_value) {
   prefs.putDouble("corr-value", correlation_value);
 }
 
-double calculateCorrelationIndex(int index, float ratio_koefficient) {
-    if (ratio_koefficient == NULL) {
-        ratio_koefficient = 1.0;
+double calculateCorrelationIndex(int index, float ratio_coefficient) {
+    if (ratio_coefficient == NULL) {
+        ratio_coefficient = 1.0;
     }
     double result = 0;
 
     for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
-        result += (input_signal[i] * (learning_buffer[i-index] / ratio_koefficient));
+        result += (input_signal[i] * (learning_buffer[i-index] / ratio_coefficient));
     }
 
     return (result / SAVED_SIGNAL_SAMPLES);
 }
 
-double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, int index, float ratio_koefficient) {
-    if (ratio_koefficient == NULL) {
-        ratio_koefficient = 1.0;
+double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, int index, float ratio_coefficient) {
+    if (ratio_coefficient == NULL) {
+        ratio_coefficient = 1.0;
     }
     double result = 0;
 
     for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
-        result += (first_signal[i] * (second_signal[i-index] / ratio_koefficient));
+        result += (first_signal[i] * (second_signal[i-index] / ratio_coefficient));
     }
 
     return (result / SAVED_SIGNAL_SAMPLES);
