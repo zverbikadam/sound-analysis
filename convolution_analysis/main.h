@@ -97,17 +97,14 @@ double calculateCorrelationIndex(int index, float ratio_coefficient) {
     return (result / SAVED_SIGNAL_SAMPLES);
 }
 
-double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, int index, float ratio_coefficient) {
-    if (ratio_coefficient == NULL) {
-        ratio_coefficient = 1.0;
-    }
+double calculateAutoCorrelation(int32_t *signal, int signal_length) {
     double result = 0;
 
-    for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
-        result += (first_signal[i] * (second_signal[i-index] / ratio_coefficient));
+    for (int i = 0; i < signal_length; i++) {
+        result += (signal[i] * signal[i]);
     }
 
-    return (result / SAVED_SIGNAL_SAMPLES);
+    return (result / signal_length);
 }
 
 double getMaximumCorrelationValue(float ratio) {
@@ -170,7 +167,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       read_data(learning_buffer, sizeof(learning_buffer));
       maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
       
-      max_correlation_value = calculateCorrelationIndex(learning_buffer, learning_buffer, 0, NULL);
+      max_correlation_value = calculateAutoCorrelation(learning_buffer, SAVED_SIGNAL_SAMPLES);
       
       save_to_memory(learning_buffer, sizeof(learning_buffer), max_correlation_value);
     } else {
