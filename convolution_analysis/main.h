@@ -7,7 +7,6 @@ Preferences prefs;
 
 static bool isButtonPressed;
 static bool lastButtonState = false;
-static bool wasDetected;
 
 static int32_t learning_buffer[SAVED_SIGNAL_SAMPLES] = { 0 };
 static int16_t maximum_amplitude_in_learning_buffer = 0;
@@ -155,8 +154,6 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     
     max_correlation_value = prefs.getDouble("corr-value", 0.0); 
 
-    wasDetected = false;
-    
     pinMode(PIN_BUTTON, INPUT);
 
     delay(500);
@@ -185,15 +182,13 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
       // analyze data
       if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
-        wasDetected = true;
         convolution_recognition_sensor->publish_state(1);
         delay(2000);
       } else {
-        wasDetected = false;
         convolution_recognition_sensor->publish_state(0);
       }
+    }
       
       lastButtonState = isButtonPressed;
-    }
   }
 };
