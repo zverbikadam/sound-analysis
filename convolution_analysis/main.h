@@ -167,7 +167,6 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     // check if button is pressed
     isButtonPressed = digitalRead(PIN_BUTTON);
     if (isButtonPressed && !lastButtonState) {
-      lastButtonState = true;
       ESP_LOGI("Doorbell Sensor", "Button pressed -> recording new sample signal...");
       delay(500);
 
@@ -178,7 +177,6 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       
       save_to_memory(learning_buffer, sizeof(learning_buffer), max_correlation_value);
     } else {
-      lastButtonState = false;
       // read data
       read_data(input_signal, sizeof(input_signal));
       int16_t max_amplitude = process_signal_and_get_max_amplitude(input_signal, INPUT_SIGNAL_SAMPLES);
@@ -189,14 +187,13 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
         wasDetected = true;
         convolution_recognition_sensor->publish_state(1);
+        delay(2000);
       } else {
         wasDetected = false;
         convolution_recognition_sensor->publish_state(0);
       }
-
-      if (wasDetected) {
-        delay(2000);
-      }
+      
+      lastButtonState = isButtonPressed;
     }
   }
 };
