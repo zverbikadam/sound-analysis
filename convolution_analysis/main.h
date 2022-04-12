@@ -110,7 +110,7 @@ double calculateCorrelationIndex(int32_t *first_signal, int32_t *second_signal, 
     return (result / SAVED_SIGNAL_SAMPLES);
 }
 
-double analyze(float ratio) {
+double getMaximumCorrelationValue(float ratio) {
   // TODO
   double result = 0;
   double max = 0;
@@ -181,7 +181,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
 
       // analyze data
-      if (analyze(amplitude_ratio) > (max_correlation_value * delta)) {
+      if (getMaximumCorrelationValue(amplitude_ratio) > (max_correlation_value * delta)) {
         convolution_recognition_sensor->publish_state(1);
         delay(2000);
       } else {
