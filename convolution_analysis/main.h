@@ -141,9 +141,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     
     size_t signal_length = prefs.getBytes("signal", NULL, NULL);
     if (signal_length > 0) {
-      ESP_LOGI("Doorbell Sensor", "Saved signal length %d", signal_length);
-      ESP_LOGI("Doorbell Sensor", "Signal buffer length %d", sizeof(learning_buffer));
-      // get signal from flash
+      // get signal from flash memory
       if (signal_length <= sizeof(learning_buffer)) {
         prefs.getBytes("signal", learning_buffer, signal_length);
         maximum_amplitude_in_learning_buffer = process_signal_and_get_max_amplitude(learning_buffer, SAVED_SIGNAL_SAMPLES);
