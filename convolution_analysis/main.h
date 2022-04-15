@@ -85,9 +85,7 @@ void save_to_memory(int32_t *signal, size_t size, double correlation_value) {
 }
 
 double calculateCorrelationIndex(int index, float ratio_coefficient) {
-    if (ratio_coefficient == NULL) {
-        ratio_coefficient = 1.0;
-    }
+    
     double result = 0;
 
     for (int i = index; i < index + SAVED_SIGNAL_SAMPLES; i++) {
@@ -120,7 +118,7 @@ double getMaximumCorrelationValue(float ratio) {
   return max;
 }
 
-class ConvolutionSensor : public Component, public BinarySensor {
+class ConvolutionSensor : public Component, public CustomMQTTDevice, public BinarySensor {
  public:
 
 // binary sensor with states 0 -> not recognized; 1 -> recognized

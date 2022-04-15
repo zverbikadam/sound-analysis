@@ -11,8 +11,8 @@ esp32:
   framework:
     type: arduino
 
-# mqtt:
-#   broker: !secret mqtt_tt_broker
+mqtt:
+  broker: !secret mqtt_broker
 
 # Enable logging
 logger:
