@@ -10,14 +10,14 @@
 
 // Config I2S
 #define I2S_PORT I2S_NUM_0
-#define I2S_READ_LEN (8 * 1024)
+#define I2S_READ_LEN (16 * 1024)
 
 // Config DMA
-#define DMA_BUF_COUNT 8 
-#define DMA_BUF_LEN 32
+#define DMA_BUF_COUNT 16 
+#define DMA_BUF_LEN 64
 
 // Config audio
-#define BITS_PER_SAMPLE 8
+#define BITS_PER_SAMPLE 16
 #define SAMPLE_RATE 8000
 #define NUM_CHANNELS 1
 
