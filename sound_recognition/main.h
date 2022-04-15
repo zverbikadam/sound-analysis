@@ -5,13 +5,12 @@
 #include <math.h>
 
 const byte NUMBER_OF_TOP_FREQUENCIES = 4;
-// 1 FFT = 0.064s, so 8*0.064 = 0.512 (half of second)
 const byte NUMBER_OF_SAMPLES_IN_TIME = 10;
 
 const int DOORBELL_FEQUENCIES[5] = {690, 960, 2070, 2900, 3440};
 
 double **major_frequencies_in_time;
-const byte range = 30;
+const byte range = 50;
 
 int counter;
 bool wasDetected;
@@ -121,7 +120,7 @@ bool is_doorbell_detected(double **frequencies_in_time)
 }
 
 class SoundSensor : public Component, public CustomMQTTDevice, public BinarySensor {
- public:
+public:
 
 // binary sensor with states 0 -> not recognized; 1 -> recognized
 BinarySensor *sound_recognition_sensor = new BinarySensor();
@@ -176,7 +175,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       sound_recognition_sensor->publish_state(0);
     }
 
-    if (counter > 6) {
+    if (counter == NUMBER_OF_SAMPLES_IN_TIME - 1) {
       counter = 0;
     } else {
       counter++;
