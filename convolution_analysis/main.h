@@ -15,7 +15,7 @@ static int32_t input_signal[INPUT_SIGNAL_SAMPLES];
 
 static double max_correlation_value;
 
-const float delta = 0.8;
+const float DELTA = 0.8;
 
 void init_i2s() {
   esp_err_t err;
@@ -176,7 +176,7 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
       float amplitude_ratio = (float) max_amplitude / maximum_amplitude_in_learning_buffer;
 
       // analyze data
-      if (getMaximumCorrelationValue(amplitude_ratio) > (max_correlation_value * delta)) {
+      if (getMaximumCorrelationValue(amplitude_ratio) > (max_correlation_value * DELTA)) {
         convolution_recognition_sensor->publish_state(1);
         delay(2000);
       } else {
