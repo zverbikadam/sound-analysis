@@ -1,10 +1,10 @@
 esphome:
-  name: sound-analyzer
+  name: fourier-analyzer
   platform: ESP32
   board: esp32dev
   includes:
-    - sound_recognition/main.h
-    - sound_recognition/config.h
+    - fourier-analysis/main.h
+    - fourier-analysis/config.h
   libraries:
     - arduinoFFT=https://github.com/zverbikadam/arduinoFFT.git#esphome
 
@@ -36,9 +36,9 @@ captive_portal:
 binary_sensor:
   - platform: custom
     lambda: |-
-      auto sound_sensor = new SoundSensor();
+      auto sound_sensor = new SoundSensorFFT();
       App.register_component(sound_sensor);
-      return {sound_sensor->sound_recognition_sensor};
+      return {sound_sensor->sound_recognition_sensor_fft};
 
     binary_sensors:
       name: "Sound Sensor"

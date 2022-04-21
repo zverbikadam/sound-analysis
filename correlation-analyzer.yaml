@@ -1,8 +1,8 @@
 esphome:
-  name: convolution-analyzer
+  name: correlation-analyzer
   includes:
-    - convolution_analysis/main.h
-    - convolution_analysis/config.h
+    - correlation-analysis/main.h
+    - correlation-analysis/config.h
   libraries:
     - Preferences
 
@@ -37,9 +37,9 @@ captive_portal:
 binary_sensor:
   - platform: custom
     lambda: |-
-      auto convolution_sensor = new ConvolutionSensor();
-      App.register_component(convolution_sensor);
-      return {convolution_sensor->convolution_recognition_sensor};
+      auto sound_sensor = new SoundSensorCorr();
+      App.register_component(sound_sensor);
+      return {sound_sensor->sound_recognition_sensor_corr};
   
     binary_sensors:
       name: "Doorbell sensor"

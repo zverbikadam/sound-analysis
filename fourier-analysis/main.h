@@ -119,11 +119,11 @@ bool is_doorbell_detected(double **frequencies_in_time)
   return false;
 }
 
-class SoundSensor : public Component, public CustomMQTTDevice, public BinarySensor {
+class SoundSensorFFT : public Component, public CustomMQTTDevice, public BinarySensor {
 public:
 
 // binary sensor with states 0 -> not recognized; 1 -> recognized
-BinarySensor *sound_recognition_sensor = new BinarySensor();
+BinarySensor *sound_recognition_sensor_fft = new BinarySensor();
 
 // For components that should be initialized after a data connection (API/MQTT) is connected
 float get_setup_priority() const override { return esphome::setup_priority::AFTER_CONNECTION; }
@@ -167,12 +167,12 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
     if(is_doorbell_detected(major_frequencies_in_time)) {
       if (!wasDetected) {
         wasDetected = true;
-        sound_recognition_sensor->publish_state(1);
+        sound_recognition_sensor_fft->publish_state(1);
       }
     }
     else {
       wasDetected = false;
-      sound_recognition_sensor->publish_state(0);
+      sound_recognition_sensor_fft->publish_state(0);
     }
 
     if (counter == NUMBER_OF_SAMPLES_IN_TIME - 1) {

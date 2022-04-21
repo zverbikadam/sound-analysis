@@ -118,11 +118,11 @@ double getMaximumCorrelationValue(float ratio) {
   return max;
 }
 
-class ConvolutionSensor : public Component, public CustomMQTTDevice, public BinarySensor {
+class SoundSensorCorr : public Component, public CustomMQTTDevice, public BinarySensor {
  public:
 
 // binary sensor with states 0 -> not recognized; 1 -> recognized
-BinarySensor *convolution_recognition_sensor = new BinarySensor();
+BinarySensor *sound_recognition_sensor_corr = new BinarySensor();
 
 // For components that should be initialized after a data connection (API/MQTT) is connected
 float get_setup_priority() const override { return esphome::setup_priority::AFTER_CONNECTION; }
@@ -177,10 +177,10 @@ float get_setup_priority() const override { return esphome::setup_priority::AFTE
 
       // analyze data
       if (getMaximumCorrelationValue(amplitude_ratio) > (max_correlation_value * DELTA)) {
-        convolution_recognition_sensor->publish_state(1);
+        sound_recognition_sensor_corr->publish_state(1);
         delay(2000);
       } else {
-        convolution_recognition_sensor->publish_state(0);
+        sound_recognition_sensor_corr->publish_state(0);
       }
     }
       
